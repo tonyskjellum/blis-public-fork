@@ -156,13 +156,27 @@ void bli_sdotv_armv8a_int
 	 
 	// Initialize the unrolled iterations' rho vectors to zero.
 
-	 " dup v28.4s, wzr                            \n\t" // v28 holds rho0; zero to start
-	 " dup v29.4s, wzr                            \n\t" // v29 holds rho1
-	 " dup v30.4s, wzr                            \n\t" // v30 holds rho2
-	 " dup v31.4s, wzr                            \n\t" // v31 holds rho3
+	 " dup v24.4s, wzr                            \n\t" // v24 holds rho0; zero to start
+	 " dup v25.4s, wzr                            \n\t" // v25 holds rho1
+	 " dup v26.4s, wzr                            \n\t" // v26 holds rho2
+	 " dup v27.4s, wzr                            \n\t" // v27 holds rho3
+#ifdef UNROLL_BY_8
+	 " dup v28.4s, wzr                            \n\t" // v28 holds rho4
+	 " dup v29.4s, wzr                            \n\t" // v29 holds rho5
+	 " dup v30.4s, wzr                            \n\t" // v30 holds rho6
+	 " dup v31.4s, wzr                            \n\t" // v31 holds rho7
+#endif
 
 	 // initialize loop:
 	 " ldr x8, %[_nv_iter]                        \n\t" // n_viter
+	 " mov x9, x8                                 \n\t" // copy
+#ifdef UNROLL_BY_4
+	 " and x9, x9, #3                             \n\t" // remainder after unrolling by 4 vectors
+#else
+	 " and x9, x9, #7                             \n\t" // remainder after unrolling by 8 vectors
+#endif
+	 " sub x8, x8, x9                             \n\t" // remove tail work
+
 	 ".LOOPITER:                                  \n\t" // main loop
 	 " or x8, x8, x8                              \n\t" // 
 	 " beq LOOPEND                                \n\t"
@@ -188,17 +202,20 @@ void bli_sdotv_armv8a_int
 	 " ldr q22,[x1, #96]                          \n\t"
 	 " ldr q23,[x1, #112]                         \n\t"
 #endif
+	 // possible prefetching here
 
-	 " fmla v29.4s, v0.4s, v4.4s                  \n\t"
-	 " fmla v30.4s, v1.4s, v5.4s                  \n\t"
-	 " fmla v31.4s, v2.4s, v6.4s                  \n\t"
-	 " fmla v32.4s, v3.4s, v7.4s                  \n\t"
+	 " fmla v24.4s, v0.4s, v4.4s                  \n\t"
+	 " fmla v25.4s, v1.4s, v5.4s                  \n\t"
+	 " fmla v26.4s, v2.4s, v6.4s                  \n\t"
+	 " fmla v27.4s, v3.4s, v7.4s                  \n\t"
 
-#ifdef UNROLL_BY_8 // is there a danger in terms of pipeline of reusing these accumulators?
-	 " fmla v29.4s, v4.4s, v8.4s                  \n\t"
-	 " fmla v30.4s, v5.4s, v9.4s                  \n\t"
-	 " fmla v31.4s, v6.4s, v10.4s                 \n\t"
-	 " fmla v32.4s, v7.4s, v11.4s                 \n\t"
+	 // possible prefetching here
+
+#ifdef UNROLL_BY_8 // is there really a danger in terms of pipeline of reusing these accumulators?
+	 " fmla v28.4s, v4.4s, v8.4s                  \n\t"
+	 " fmla v29.4s, v5.4s, v9.4s                  \n\t"
+	 " fmla v30.4s, v6.4s, v10.4s                 \n\t"
+	 " fmla v31.4s, v7.4s, v11.4s                 \n\t"
 #endif
 
 	 // update pointers:
@@ -213,7 +230,9 @@ void bli_sdotv_armv8a_int
 	 // clean up the remainder of the work:
 	 //
 #ifdef UNROLL_BY_8 
-// four vector code if four vectors of work remain:
+	 // consolidate to 4 accumulators here:
+
+	 // four vector code if four vectors of work remain:
 
 #endif
 	 //two vector code if two vectors of work remain:
