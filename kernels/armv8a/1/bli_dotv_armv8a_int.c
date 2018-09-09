@@ -126,7 +126,7 @@ void bli_sdotv_armv8a_int
 	 " ldr x8, %[_n_viter]                        \n\t" // n_viter
 
 	 ".LOOPITER:                                  \n\t" // main loop
-	 " or x8, x8, x8                              \n\t" // 
+	 " orr x8, x8, x8                             \n\t" // 
 	 " beq LOOPEND                                \n\t"
 
 	 // float loads to vectors:
@@ -281,16 +281,16 @@ void bli_sdotv_armv8a_int
 #endif
 	 " dup v16.4s, wzr                            \n\t" //
 
-	 " ld1 {v0.4s}[0], [x0]                       \n\t" // x: 1 float (same bits as v0.S)
+	 " ld1 {v0.4s}[0], [x0]                       \n\t" // x: 1 float (same bits as v0.S) 
 
 	 " ld1 {v16.4s}[0],[x1]                       \n\t" // y: 1 float (same bits as v16.S)
 
 #ifdef APPROACH_1
-	 //this form exists: fmla Vd.S, Vd'.S, Vm.S[index]; but docs say 0<=m<=15. not 0<=m<=31.
-	 " fmla v24.4s, v16.4s, {v0.4s}[0]            \n\t" // would be legal.
+	 //this form exists: fmla Vd.S, Vn.S, Vm.S[index]; but docs say 0<=m<=15 vs 0<=m<=31. Vd.S:=Vn.S*Vm.s[index]
+	 " fmla v24.4s, v16.4s, {v0.4s}[0]            \n\t" //
 #else
 	 " fmla v24.4s, v0.4s, v16.4s                 \n\t" // one fma operation needed
-	                                                    // top three entries were pre-zeroed
+	                                                    // top three 32-bit entries were pre-zeroed
 #endif
 	 // update pointers:
 	 " add x0, x0, #4                             \n\t"
@@ -299,8 +299,9 @@ void bli_sdotv_armv8a_int
 	 ".SKIP_ONE_FLOAT_AFTER:                      \n\t"
 
 	 // consolidate accumulator in v24 to a scalar here (in v24.s[0]; same bits as v24.S):
-	 "faddp v24.4s, v24.4s, v24.4s                \n\t" // reduction: [0]new := sum [0]+[1]; [1]new := sum [2] : [3]
-	 "faddp v24.4s, v24.4s, v24.4s                \n\t" // reduction: [0]new := sum [0]+[1]==> sum of all 4 elements.
+	 "faddp v24.4s, v24.4s, v24.4s                \n\t" // reduction: [0]_new   := sum [0]+[1]; [1]_new := sum [2] + [3]
+	 "faddp v24.4s, v24.4s, v24.4s                \n\t" // reduction: [0]_newer := sum [0]_new+[1]_new
+	                                                    //                   ==> sum of all 4 original elements.
 
 	 // store scalar float result:
 	 " ldr x9,%[_rho0_addr]                       \n\t"
