@@ -96,10 +96,8 @@ void bli_sdotv_armv8a_int
 	}
 
 
-#if 0
-	// Initialize the local scalar rho1 to zero. --it says rho1, but you initialize rho0
+	// Initialize the local scalar rho0 to zero.
 	PASTEMAC(s,set0s)( rho0 );
-#endif
 
 	if(n_viter)
         {
@@ -346,7 +344,7 @@ void bli_sdotv_armv8a_int
 	// Copy the final result into the output variable.
 	PASTEMAC(s,copys)( rho0, *rho );
 }
-
+y
 // -----------------------------------------------------------------------------
 
 void bli_ddotv_zen_int
