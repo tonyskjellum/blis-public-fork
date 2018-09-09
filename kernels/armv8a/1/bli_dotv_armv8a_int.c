@@ -175,14 +175,6 @@ void bli_sdotv_armv8a_int
 	 " b  .LOOPITER                               \n\t" 
 
 	 ".LOOPEND:                                   \n\t"
-	 //
-	 // clean up the remainder of the work:
-	 //
-	 // 
-	 " ldr x8, %[_n_left]                         \n\t" // n_left
-
-#ifdef UNROLL_BY_8 
-	 " tbz x8, #16, SKIP_FOR_VECTORS_AFTER        \n\t"
 
 	 // consolidate to 4 accumulators here:
 	 " fadd v24.4s, v28.4s, v24.4s                \n\t"
@@ -190,8 +182,12 @@ void bli_sdotv_armv8a_int
 	 " fadd v26.4s, v30.4s, v26.4s                \n\t"
 	 " fadd v27.4s, v31.4s, v27.4s                \n\t"
 
-	 // four vector code if four vectors of work remain:
+	 " ldr x8, %[_n_left]                         \n\t" // n_left
 
+#ifdef UNROLL_BY_8 
+	 " tbz x8, #16, SKIP_FOR_VECTORS_AFTER        \n\t"
+
+	 // four vector code if four vectors of work remain.
 	 " ldr q0, [x0]                               \n\t" // 16 elements of x
 	 " ldr q1, [x0, #16]                          \n\t"
 	 " ldr q2, [x0, #32]                          \n\t"
@@ -207,17 +203,17 @@ void bli_sdotv_armv8a_int
 	 " fmla v26.4s, v2.4s, v18.4s                 \n\t"
 	 " fmla v27.4s, v3.4s, v19.4s                 \n\t"
 
-	 // update pointers:
+	 // update pointers.
 	 " add x0, x0, #64                            \n\t"
 	 " add x1, x1, #64                            \n\t"
 
 	 ".SKIP_FOUR_VECTORS_AFTER:                   \n\t"
 #endif
-	 // consolidate to 2 accumulators here:
+	 // consolidate to 2 accumulators.
 	 " fadd v24.4s, v26.4s, v24.4s                \n\t"
 	 " fadd v25.4s, v27.4s, v25.4s                \n\t"
 
-	 //two vector code if two vectors of work remain:
+	 //two vector code if two vectors of work remain.
 	 " tbz x8, #8, SKIP_TWO_VECTORS_AFTER         \n\t"
 
 	 " ldr q0, [x0]                               \n\t" // 8 elements of x
@@ -229,15 +225,16 @@ void bli_sdotv_armv8a_int
 	 " fmla v24.4s, v0.4s, v16.4s                 \n\t"
 	 " fmla v25.4s, v1.4s, v17.4s                 \n\t"
 
-	 // update pointers:
+	 // update pointers.
 	 " add x0, x0, #32                            \n\t"
 	 " add x1, x1, #32                            \n\t"
 
 	 ".SKIP_TWO_VECTORS_AFTER:                    \n\t"
-	 // consolidate to 1 accumulator here:
+
+	 // consolidate to 1 accumulator here.
 	 " fadd v24.4s, v25.4s, v24.4s                \n\t"
 
-	 //one vector code if one vector of work remains:
+	 //one vector code if one vector of work remains.
 	 " tbz x8, #4, SKIP_ONE_VECTOR_AFTER          \n\t"
 
 	 " ldr q0, [x0]                               \n\t" // 4 elements of x
@@ -246,16 +243,16 @@ void bli_sdotv_armv8a_int
 
 	 " fmla v24.4s, v0.4s, v16.4s                 \n\t"
 
-	 // update pointers:
+	 // update pointers.
 	 " add x0, x0, #16                            \n\t"
 	 " add x1, x1, #16                            \n\t"
 
 	 ".SKIP_ONE_VECTOR_AFTER:                     \n\t"
 
-	 // consolidate to 1 accumulator here:
+	 // consolidate to 1 accumulator here.
 	 " fadd v24.4s, v25.4s, v24.4s                \n\t"
 
-	 //one two floats of work remain?
+	 // two floats of work remain?
 	 " tbz x8, #2, SKIP_TWO_FLOATS_AFTER          \n\t"
 
 	 " ldr d0, [x0]                              \n\t" // x: 2 floats must be loaded [or ld1.2s ]
@@ -264,7 +261,7 @@ void bli_sdotv_armv8a_int
 
 	 "fmla v24.2s, v0.2s, v16.2s                  \n\t" // two fma operations needed     [bottom half of reg.]
 	                                                    // (top two floats should be zeroed on write)
-	 // update pointers:
+	 // update pointers.
 	 " add x0, x0, #8                             \n\t"
 	 " add x1, x1, #8                             \n\t"
 
@@ -290,7 +287,7 @@ void bli_sdotv_armv8a_int
 	 " fmla v24.4s, v0.4s, v16.4s                 \n\t" // one fma operation needed
 	                                                    // top three 32-bit entries were pre-zeroed
 #endif
-	 // update pointers:
+	 // update pointers.
 	 " add x0, x0, #4                             \n\t"
 	 " add x1, x1, #4                             \n\t"
 
@@ -314,7 +311,7 @@ void bli_sdotv_armv8a_int
 	 : // Register clobber list
 	   "x0", "x1", "x8", "x9"  // avoid x16-x18 and x29-x30; x19-x28 must be callee saved.
            "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7",
-	 //"v8", "v9", "v10", "v11", "v12", "v13", "v14", "v15", // don't use these [v8-v15 are also callee saved if used].
+	 //"v8", "v9", "v10", "v11", "v12", "v13", "v14", "v15", // don't use these [v8-v15 must be callee saved if used].
 	   "v16", "v17", "v18", "v19", "v20", "v21", "v22", "v23",
 	   "v24", "v25", "v26", "v27", "v28", "v29", "v30", "v31"   // Note: less registers clobbered for unroll-by-4!
         );
