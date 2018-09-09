@@ -184,8 +184,7 @@ void bli_sdotv_armv8a_int
 	 " ldr x8, %[_n_left]                         \n\t" // n_left
 
 #ifdef UNROLL_BY_8 
-	 " test x8, #16                               \n\t"
-	 " beq SKIP_FOUR_VECTORS_AFTER                \n\t"
+	 " tbz x8, #16, SKIP_FOR_VECTORS_AFTER        \n\t"
 
 	 // consolidate to 4 accumulators here:
 	 " fadd v24.4s, v28.4s, v24.4s                \n\t"
@@ -221,8 +220,7 @@ void bli_sdotv_armv8a_int
 	 " fadd v25.4s, v27.4s, v25.4s                \n\t"
 
 	 //two vector code if two vectors of work remain:
-	 " test x8, #8                                \n\t"
-	 " beq SKIP_TWO_VECTORS_AFTER                 \n\t"
+	 " tbz x8, #8, SKIP_TWO_VECTORS_AFTER         \n\t"
 
 	 " ldr q0, [x0]                               \n\t" // 8 elements of x
 	 " ldr q1, [x0, #16]                          \n\t"
@@ -242,8 +240,7 @@ void bli_sdotv_armv8a_int
 	 " fadd v24.4s, v25.4s, v24.4s                \n\t"
 
 	 //one vector code if one vector of work remains:
-	 " test x8, #4                                \n\t"
-	 " beq SKIP_ONE_VECTOR_AFTER                  \n\t"
+	 " tbz x8, #4, SKIP_ONE_VECTOR_AFTER          \n\t"
 
 	 " ldr q0, [x0]                               \n\t" // 4 elements of x
 
@@ -261,8 +258,7 @@ void bli_sdotv_armv8a_int
 	 " fadd v24.4s, v25.4s, v24.4s                \n\t"
 
 	 //one two floats of work remain?
-	 " test x8, #2                                \n\t"
-	 " beq SKIP_TWO_FLOATS_AFTER                  \n\t"
+	 " tbz x8, #2, SKIP_TWO_FLOATS_AFTER          \n\t"
 
 	 " ldr d0, [x0]                              \n\t" // x: 2 floats must be loaded [or ld1.2s ]
 
@@ -277,8 +273,7 @@ void bli_sdotv_armv8a_int
 	 ".SKIP_TWO_FLOATS_AFTER:                     \n\t"
 
 	 //one two floats of work remain?
-	 " test x8, #1                                \n\t"
-	 " beq SKIP_ONE_FLOAT_AFTER                   \n\t"
+	 " tbz x8, #1, SKIP_ONE_FLOAT_AFTER           \n\t"
 
 #warning "Finish post-vector code"
 #ifndef APPROACH_1
