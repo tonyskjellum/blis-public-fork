@@ -303,8 +303,8 @@ void bli_sdotv_armv8a_int
 	 "faddp v24.4s, v24.4s, v24.4s                \n\t" // reduction: [0]new := sum [0]+[1]==> sum of all 4 elements.
 
 	 // store scalar float result:
-	 " ldr x16,%[_rho0_addr]                      \n\t"
-	 " st1 {v24.s}[0], [x16]                      \n\t" -- verified this instruction is right ; could use V24.S?
+	 " ldr x9,%[_rho0_addr]                       \n\t"
+	 " st1 {v24.s}[0], [x9]                       \n\t" -- verified this instruction is right ; could use V24.S?
 	 : // output operands (none)
 	 : // input operands  (none)
            [xaddr]      "m" (x),       // 0
@@ -313,9 +313,9 @@ void bli_sdotv_armv8a_int
 	   [_n_left]    "m" (n_left)   // 3
 	   [_rho0_addr] "m" (rho0_addr)// 4 --- alt here: [_rho0_addr] "r" (&rho0) 
 	 : // Register clobber list
-	   "x0", "x1", "x8", "x16"
+	   "x0", "x1", "x8", "x9"  // avoid x16-x18 and x29-x30; x19-x28 must be callee saved.
            "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7",
-	 //"v8", "v9", "v10", "v11", "v12", "v13", "v14", "v15",
+	 //"v8", "v9", "v10", "v11", "v12", "v13", "v14", "v15", // don't use these [v8-v15 are also callee saved if used].
 	   "v16", "v17", "v18", "v19", "v20", "v21", "v22", "v23",
 	   "v24", "v25", "v26", "v27", "v28", "v29", "v30", "v31"   // Note: less registers clobbered for unroll-by-4!
         );
